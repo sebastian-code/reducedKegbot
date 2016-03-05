@@ -35,7 +35,7 @@ logging.basicConfig(filename='reducedKegbot.log',
                     datefmt='%Y/%d/%m %H:%M:%S',
                     level=logging.WARNING)#.INFO)ERROR)CRITICAL)
 
-# Regex for extracting data from Twitter control messages 
+# Regex for extracting data from Twitter control messages
 import re
 
 # Pushbullet Interface
@@ -49,11 +49,10 @@ import json
 #####################################################
 
 # Project Path (on the Pi)
-config_path = "/home/pi/prj/reducedKegbot"
-os.chdir(config_path)
+ROOT_PATH = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 # Import secret configuration info from secret.yaml
-secret_config_yaml = open(config_path+"/secret.yaml", 'r')
+secret_config_yaml = open(ROOT_PATH+"/secret.yaml", 'r')
 secret_config = yaml.load(secret_config_yaml)
 secret_config_yaml.close()
 
@@ -78,16 +77,16 @@ twitter = Twython(APP_KEY, APP_SECRET, OAUTH_TOKEN, OAUTH_TOKEN_SECRET)
 PUSHBULLET_ACCESS_TOKEN = secret_config['PUSHBULLET_ACCESS_TOKEN']
 
 # Import keg/tap info from taps.yaml
-# taps_yaml = open(config_path+"/taps.yaml", 'r')
+# taps_yaml = open(ROOT_PATH+"/taps.yaml", 'r')
 # taps = yaml.load(taps_yaml)
 # taps_yaml.close()
 
-taps_json = open(config_path+"/taps.json", 'r')
+taps_json = open(ROOT_PATH+"/taps.json", 'r')
 taps = yaml.load(taps_json)
 taps_json.close()
 
 # Import configuration from kegbot_config.yaml
-kegbot_config_yaml = open(config_path+"/kegbot_config.yaml", 'r')
+kegbot_config_yaml = open(ROOT_PATH+"/kegbot_config.yaml", 'r')
 kb_config = yaml.load(kegbot_config_yaml)
 kegbot_config_yaml.close()
 
@@ -129,7 +128,7 @@ def send_status_email():
     email_subject = generate_email_subject(taps)
     # Generate status email message body
     email_body = generate_email_body(taps)
-    # send email update with volumes    
+    # send email update with volumes
     send_email(kb_email_addr, DISCOFRIDGE_ADMINS, email_subject, email_body, smtp_server)
 
 def generate_email_subject(taps_dict):
@@ -140,11 +139,11 @@ def generate_email_subject(taps_dict):
             subject = "LOW KEG ALERT"
             break
     return subject
-    
+
 def generate_email_body(taps_dict):
     '''
     Should use an enumerate() loop to iterate over the number of taps, for when there aren't 3 taps.
-    
+
     '''
     body = '''
 Tap 1, %s, %.2fgal (%.1fL) remaining\n
@@ -162,7 +161,7 @@ def send_email(from_email, to_email, msg_subj, msg_body, mail_server):
     Sends an email to recipients(to_email), from the email address specified in
     argument from_email, with the given subject and body. Use the mail server
     specified in argument mail_server
-    
+
     All arguments are given as strings
     '''
     BODY = string.join((
@@ -187,9 +186,9 @@ def convert_to_volume(flow_counts_list):
         gallons_poured = ounces_poured / 128
         # Update current gallons remaining for this keg
         taps[ii+1][0] = taps[ii+1][0] - gallons_poured
-    
+
 # def update_taps_yaml(taps_dict):
-    # ''' 
+    # '''
     # Updates the taps.yaml file, which stores beer data
     # '''
     # if len(taps_dict) == 3:
@@ -202,7 +201,7 @@ def convert_to_volume(flow_counts_list):
         # print("taps dictionary isn't empty, but doesn't have 3 elements")
 
 def update_taps_json():
-    ''' 
+    '''
     Updates the taps.json file, which stores beer data
     '''
     with open('taps.json', 'w') as jsonfile:
@@ -340,7 +339,7 @@ def tweet_confirm_success(tweet, msg):
         twitter.update_status(status=message)
     except:
         print("Some kind of twitter error. Is beer name too long?")
-        
+
 #####################################################
 # Program Setup
 #####################################################
@@ -396,7 +395,7 @@ if __name__ == '__main__':
             # Read flow data from serial interface
             # If data waiting in serial buffer
             bytesToRead = ser.inWaiting()
-            if (bytesToRead>0):  
+            if (bytesToRead>0):
                 try:
                     flow_temp_data = ser.readline().strip()
                     # Use regex search to extract flow count for each tap
@@ -419,7 +418,7 @@ if __name__ == '__main__':
                 except: # Default except
                     print("Problem reading serial data! Found: {0}".format(flow_temp_data))
                     time.sleep(1)
-                
+
         ########### Check tweet queue ##############
             if len(tweet_queue) > 0:
                 # Send tweet to tweet_checker
@@ -433,14 +432,13 @@ if __name__ == '__main__':
             # update_web_taps_json(temperature)
         # else:
             # print("taps dictionary length is currently {0}!!!".format(len(taps)))
-        
+
         # Stop Cron Scheduler
         print("Shutting down cron scheduler...")
         sched.shutdown()
-        
+
         # Close Serial
         print("Closing serial connection...")
         ser.close()
-        
+
         # print("Final length of taps.yaml: {}".format(len(taps)))
-        
