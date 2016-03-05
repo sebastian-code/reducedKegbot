@@ -1,48 +1,33 @@
 #!/usr/bin/env python2
 
-# Used in scheduling
 import time
-from datetime import datetime, timedelta
-
-# System modules
+import re
+import json
 import os
-from sys import platform as _platform
+import string
+import yaml
+import serial
+import logging
 
-# For sending email
+from datetime import datetime, timedelta
+from sys import platform as _platform
 from smtplib import SMTP
 from email.mime.text import MIMEText
-import string
-
-# For Twitter interface
 from threading import Thread
 from collections import deque
+
+from pushbullet import Pushbullet
 from requests.exceptions import ChunkedEncodingError
 from twython import Twython, TwythonStreamer
-
-# For parsing YAML files
-import yaml
-
-# Receiving sensor data from Arduino
-import serial
-
-# Scheduling tasks like sending status email
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.blocking import BlockingScheduler
-import logging
+
 logging.basicConfig(filename='reducedKegbot.log',
                     filemode='a',
                     format='[%(asctime)s] %(message)s',
                     datefmt='%Y/%d/%m %H:%M:%S',
-                    level=logging.WARNING)#.INFO)ERROR)CRITICAL)
+                    level=logging.WARNING)  # .INFO)ERROR)CRITICAL)
 
-# Regex for extracting data from Twitter control messages
-import re
-
-# Pushbullet Interface
-from pushbullet import Pushbullet
-
-# Import JSON for communicating with website
-import json
 
 #####################################################
 # Setup
