@@ -37,7 +37,7 @@ logging.basicConfig(filename='reducedKegbot.log',
 ROOT_PATH = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 # Import secret configuration info from secret.yaml
-secret_config_yaml = open(ROOT_PATH+"/secret.yaml", 'r')
+secret_config_yaml = open(os.path.join(ROOT_PATH, 'secret.yaml'), 'r')
 secret_config = yaml.load(secret_config_yaml)
 secret_config_yaml.close()
 
