@@ -381,7 +381,7 @@ if __name__ == '__main__':
     # print("Length of taps.yaml: {}".format(len(taps)))
     # Start Email scheduler
     sched = BackgroundScheduler()
-    sched.add_job(send_status_email, 'cron', hour='8') #GMT??? How to set timezone?
+    sched.add_job(send_status_email, 'cron', hour='8')  # GMT??? How to set timezone?
     sched.start()
     # Create Tweets Queue
     tweet_queue = deque()
