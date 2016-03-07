@@ -9,10 +9,9 @@ import yaml
 import serial
 import logging
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from sys import platform as _platform
 from smtplib import SMTP
-from email.mime.text import MIMEText
 from threading import Thread
 from collections import deque
 
@@ -20,7 +19,6 @@ from pushbullet import Pushbullet
 from requests.exceptions import ChunkedEncodingError
 from twython import Twython, TwythonStreamer
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.blocking import BlockingScheduler
 
 logging.basicConfig(filename='reducedKegbot.log',
                     filemode='a',
@@ -76,7 +74,7 @@ kb_config = yaml.load(kegbot_config_yaml)
 kegbot_config_yaml.close()
 
 # Flow meter pulse counts to volume conversion
-cts_per_oz = kb_config['CTS_PER_OZ'] # ~170.5 pulses/oz.
+cts_per_oz = kb_config['CTS_PER_OZ']  # ~170.5 pulses/oz.
 
 # set greater than 0 to make things print out development messages
 verbosity = kb_config['VERBOSITY']
@@ -178,8 +176,8 @@ def convert_to_volume(flow_counts_list):
     # '''
     # if len(taps_dict) == 3:
         # with open('taps.yaml', 'w') as outfile:
-            # outfile.write(yaml.dump(taps_dict, default_flow_style=False))
-            # outfile.close()
+        # outfile.write(yaml.dump(taps_dict, default_flow_style=False))
+        # outfile.close()
     # elif len(taps_dict) == 0:
         # print("taps dictionary is empty! Won't write YAML")
     # else:
