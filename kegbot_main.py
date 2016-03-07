@@ -17,7 +17,7 @@ from collections import deque
 
 from pushbullet import Pushbullet
 from requests.exceptions import ChunkedEncodingError
-from twython import Twython, TwythonStreamer
+from twython import Twython, TwythonStreamer, TwythonError
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logging.basicConfig(filename='reducedKegbot.log',
@@ -90,9 +90,10 @@ FLOW_REGEX = r"tap1:(\d+) tap2:(\d+) tap3:(\d+) temp1:(\d+\.\d+) temp2:(\d+\.\d+
 
 # Serial communication with sensor interface (Arduino)
 serial_baud = kb_config['SERIAL_BAUD']
-if _platform == "linux" or _platform == "linux2": # linux
+if _platform == "linux" or _platform == "linux2":  # linux
     serial_port = kb_config['SERIAL_PORT_LINUX']
-elif _platform == "win32": # Windows...
+
+elif _platform == "win32":  # Windows...
     serial_port = kb_config['SERIAL_PORT_WINDOWS']
 
 # Declare Variables
@@ -103,7 +104,6 @@ temperature = [0.0, 0.0, 0.0]
 #####################################################
 # Support Functions
 #####################################################
-
 def send_status_email():
     email_subject = ""
     email_body = ""
@@ -112,32 +112,42 @@ def send_status_email():
     # Generate status email message body
     email_body = generate_email_body(taps)
     # send email update with volumes
-    send_email(kb_email_addr, DISCOFRIDGE_ADMINS, email_subject, email_body, smtp_server)
+    send_email(kb_email_addr, DISCOFRIDGE_ADMINS, email_subject,
+               email_body, smtp_server)
+
 
 def generate_email_subject(taps_dict):
-    subject = "Tap1:{0} Tap2:{1} Tap3:{2}".format(taps_dict[1][0], taps_dict[2][0], taps_dict[3][0])
+    subject = "Tap1:{0} Tap2:{1} Tap3:{2}".format(taps_dict[1][0],
+                                                  taps_dict[2][0],
+                                                  taps_dict[3][0])
     # Check if any taps should generate alert
     for tap in taps_dict:
-        if taps_dict[tap][2] == "ACTIVE" and taps_dict[tap][0] < low_vol_thresh:
+        if taps_dict[tap][2] == "ACTIVE" and \
+                taps_dict[tap][0] < low_vol_thresh:
             subject = "LOW KEG ALERT"
             break
+
     return subject
+
 
 def generate_email_body(taps_dict):
     '''
-    Should use an enumerate() loop to iterate over the number of taps, for when there aren't 3 taps.
+    Should use an enumerate() loop to iterate over the number of taps, for
+    when there aren't 3 taps.
 
     '''
     body = '''
 Tap 1, %s, %.2fgal (%.1fL) remaining\n
 Tap 2, %s, %.2fgal (%.1fL) remaining\n
 Tap 3, %s, %.2fgal (%.1fL) remaining''' % (taps_dict[1][4], taps_dict[1][0],
-                                        (3.7854*taps_dict[1][0]),
-                                        taps_dict[2][4], taps_dict[2][0],
-                                        (3.785*taps_dict[2][0]),
-                                        taps_dict[3][4], taps_dict[3][0],
-                                        (3.785*taps_dict[3][0]))
+                                           (3.7854*taps_dict[1][0]),
+                                           taps_dict[2][4], taps_dict[2][0],
+                                           (3.785*taps_dict[2][0]),
+                                           taps_dict[3][4], taps_dict[3][0],
+                                           (3.785*taps_dict[3][0]))
+
     return body
+
 
 def send_email(from_email, to_email, msg_subj, msg_body, mail_server):
     '''
@@ -150,12 +160,13 @@ def send_email(from_email, to_email, msg_subj, msg_body, mail_server):
     BODY = string.join((
         "From: %s" % from_email,
         "To: %s" % to_email,
-        "Subject: %s" % msg_subj ,
+        "Subject: %s" % msg_subj,
         "Body: %s" % msg_body
         ), "\r\n")
     s = SMTP(mail_server)
     s.sendmail(from_email, to_email, BODY)
     s.quit()
+
 
 def convert_to_volume(flow_counts_list):
     '''
@@ -183,6 +194,7 @@ def convert_to_volume(flow_counts_list):
     # else:
         # print("taps dictionary isn't empty, but doesn't have 3 elements")
 
+
 def update_taps_json():
     '''
     Updates the taps.json file, which stores beer data
@@ -191,7 +203,7 @@ def update_taps_json():
         json.dump(taps, jsonfile, indent=4)
         jsonfile.close()
 
-# def update_web_taps_json(taps_dict, temps):
+
 def update_web_taps_json(temps):
     '''
     Updates the json file, which is used by the website to display beer data
@@ -203,7 +215,9 @@ def update_web_taps_json(temps):
         json.dump(temporary_dict, jsonfile, indent=4)
         jsonfile.close()
 
-def update_taps_dict(tap, current_keg_vol, total_keg_vol, is_active, date_tapped, long_name, short_name):
+
+def update_taps_dict(tap, current_keg_vol, total_keg_vol, is_active,
+                     date_tapped, long_name, short_name):
     '''
     Given a set of parameters for a single new keg, this function updates
     the taps.yaml to reflect that new keg
@@ -216,6 +230,7 @@ def update_taps_dict(tap, current_keg_vol, total_keg_vol, is_active, date_tapped
     taps[tap][4] = long_name
     taps[tap][5] = short_name
 
+
 def pushbullet_new_keg_update(taps, pb_object):
     '''
     Sends a pushbullet push over the kegerator channel
@@ -224,6 +239,7 @@ def pushbullet_new_keg_update(taps, pb_object):
     pb_msg = "Tap 1: %s (%.2f gal.)\nTap 2: %s (%.2f gal.)\nTap 3: %s (%.2f gal.)" % (taps[1][5], taps[1][0], taps[2][5], taps[2][0], taps[3][5], taps[3][0])
     push = pb_kegbot_channel.push_note(pb_title, pb_msg)
 
+
 def tweet_new_keg_update(taps, new_keg_tap_num):
     '''
     Sends a Tweet that a new keg has been added
@@ -231,8 +247,10 @@ def tweet_new_keg_update(taps, new_keg_tap_num):
     message = "#NuvationHasANewKeg\nTap 1: %s (%.2f gal.)\nTap 2: %s (%.2f gal.)\nTap 3: %s (%.2f gal.)" % (taps[1][5], taps[1][0], taps[2][5], taps[2][0], taps[3][5], taps[3][0])
     try:
         twitter.update_status(status=message)
+
     except TwythonError as e:
         print e
+
 
 class TwitterStream(TwythonStreamer):
     '''
@@ -253,6 +271,7 @@ class TwitterStream(TwythonStreamer):
         # Uncomment the next line!
         # self.disconnect()
 
+
 def stream_tweets(tweets_queue):
     '''
     A queue that holds Tweets which contain the Twitter search term "#NUVATION_KEGBOT"
@@ -264,6 +283,7 @@ def stream_tweets(tweets_queue):
         # Sometimes the API sends back one byte less than expected which results in an exception in the
         # current version of the requests library
         stream_tweets(tweet_queue)
+
 
 def tweet_checker(tweets_queue):
     '''
@@ -281,13 +301,13 @@ def tweet_checker(tweets_queue):
                 if new_tweet['user']['screen_name'].lower() in APPROVED_TWITTER_ADMINS:
                     # Extract data from tweet
                     m = re.search(TWITTER_REGEX, check_tweet)
-                    tap = int(m.group(1)) # Int tap number
-                    current_keg_vol = float(m.group(2)) # Float current volume
-                    total_keg_vol = float(m.group(3)) # Float starting volume
-                    is_active = m.group(4) # string
-                    date_tapped = m.group(5) # string
-                    long_name = m.group(6) # string
-                    short_name = m.group(7) # string
+                    tap = int(m.group(1))  # Int tap number
+                    current_keg_vol = float(m.group(2))  # Float current volume
+                    total_keg_vol = float(m.group(3))  # Float starting volume
+                    is_active = m.group(4)  # string
+                    date_tapped = m.group(5)  # string
+                    long_name = m.group(6)  # string
+                    short_name = m.group(7)  # string
                     # Update beer dictionary
                     update_taps_dict(tap, current_keg_vol, total_keg_vol, is_active, date_tapped, long_name, short_name)
                     # Update beer database (YAML)
@@ -295,13 +315,16 @@ def tweet_checker(tweets_queue):
                     update_taps_json()
                     # Update beer database (JSON) for website
                     update_web_taps_json(temperature)
-                    # Print update status to console and send update success tweet to user
+                    # Print update status to console and send update success
+                    # tweet to user
                     message = "successfully put %.2f gal. (%.1fL) of %s on Tap #%d" % (current_keg_vol, current_keg_vol*3.785, long_name, tap)
                     tweet_confirm_success(new_tweet, message)
                     # Send public update tweet and pushbullet
                     tweet_new_keg_update(taps, tap)
                     pushbullet_new_keg_update(taps, pb)
-                # Correct Regex, but from UNAPPROVED admin. They must be abused.
+
+                # Correct Regex, but from UNAPPROVED admin.
+                # They must be abused.
                 else:
                     message = "You are not an approved Discofridge admin"
                     tweet_confirm_success(new_tweet, message)
@@ -320,6 +343,7 @@ def tweet_confirm_success(tweet, msg):
     print(message)
     try:
         twitter.update_status(status=message)
+
     except:
         print("Some kind of twitter error. Is beer name too long?")
 
@@ -334,6 +358,7 @@ try:
         time.sleep(1)
         ser.flushInput()
         print(ser.name + ' is flushed and open at {}bd'.format(serial_baud))
+
 except:
     print("Error opening serial connection")
 
@@ -341,6 +366,7 @@ except:
 try:
     pb = Pushbullet(PUSHBULLET_ACCESS_TOKEN)
     pb_kegbot_channel = pb.channels[0]
+
 except:
     print("Could not start pushbullet interface")
 
@@ -374,11 +400,12 @@ if __name__ == '__main__':
                 # print("Length of taps.yaml: {}".format(len(taps)))
                 # print(taps)
                 # break
-        ########### Check Flow Meters ##############
+
+            ########### Check Flow Meters ##############
             # Read flow data from serial interface
             # If data waiting in serial buffer
             bytesToRead = ser.inWaiting()
-            if (bytesToRead>0):
+            if (bytesToRead > 0):
                 try:
                     flow_temp_data = ser.readline().strip()
                     # Use regex search to extract flow count for each tap
@@ -388,17 +415,21 @@ if __name__ == '__main__':
                         tap_flow_counts = [int(flow_temp_text.group(1)), int(flow_temp_text.group(2)), int(flow_temp_text.group(3))]
                         temperature = [float(flow_temp_text.group(4)), float(flow_temp_text.group(5)), float(flow_temp_text.group(6))]
                         # Convert tap_flow_counts[] to volume and update yaml/json files
-                        if (tap_flow_counts[0]>10 or tap_flow_counts[1]>10 or tap_flow_counts[2]>10):
+                        if (tap_flow_counts[0] > 10 or tap_flow_counts[1] > 10 or tap_flow_counts[2] > 10):
                             convert_to_volume(tap_flow_counts)
                             # update_taps_yaml(taps)
                             update_taps_json()
+
                         update_web_taps_json(temperature)
+
                     else:
                         print("Regex problem, found string: {}".format(flow_temp_text))
+
                 except KeyboardInterrupt:
                     print("Press Ctrl+C again to quit")
                     time.sleep(2)
-                except: # Default except
+
+                except:  # Default except
                     print("Problem reading serial data! Found: {0}".format(flow_temp_data))
                     time.sleep(1)
 
